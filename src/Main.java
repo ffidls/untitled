@@ -8,8 +8,8 @@ public static void main(String[] args) {
 
     Node sum = new AddNode(num, var);
 
-    System.out.println("Результат 10 + x: " + sum.evaluate(myVars)); // Будет 15
+    System.out.println("result 10 + x: " + sum.evaluate(myVars));
 
-    System.out.println("Вид дерева:");
+    System.out.println("tree:");
     sum.print("");
 }
