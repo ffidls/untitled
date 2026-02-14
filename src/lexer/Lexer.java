@@ -6,7 +6,7 @@ import java.util.List;
 public class Lexer {
     private final String input;
     private int pos = 0;
-    private int parenthesisBalance = 0; // Для проверки (())
+    private int parenthesisBalance = 0;
 
     public Lexer(String input) {
         this.input = input;
