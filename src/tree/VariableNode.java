@@ -1,3 +1,5 @@
+package tree;
+
 import java.util.Map;
 
 public class VariableNode implements Node {

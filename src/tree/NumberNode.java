@@ -1,3 +1,5 @@
+package tree;
+
 import java.util.Map;
 
 public class NumberNode implements Node{

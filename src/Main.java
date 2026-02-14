@@ -1,3 +1,7 @@
+import tree.Node;
+import tree.NumberNode;
+import tree.VariableNode;
+
 public static void main(String[] args) {
 
     Map<String, Integer> myVars = new HashMap<>();
@@ -6,10 +10,10 @@ public static void main(String[] args) {
     Node num = new NumberNode(10);
     Node var = new VariableNode("x");
 
-    Node sum = new AddNode(num, var);
+    // Node sum = new AddNode(num, var);
 
-    System.out.println("result 10 + x: " + sum.evaluate(myVars));
+    // System.out.println("result 10 + x: " + sum.evaluate(myVars));
 
-    System.out.println("tree:");
-    sum.print("");
+    //System.out.println("tree:");
+    // sum.print("");
 }
