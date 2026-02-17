@@ -2,10 +2,10 @@ package tree;
 
 import java.util.Map;
 
-public class NumberNode implements Node{
+public class IntegerNode implements Node{
     private final int value;
 
-    public NumberNode(int value){
+    public IntegerNode(int value){
         this.value = value;
     }
 

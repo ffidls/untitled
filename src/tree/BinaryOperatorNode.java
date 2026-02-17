@@ -5,9 +5,9 @@ import java.util.Map;
 public class BinaryOperatorNode implements Node {
     private final Node left;
     private final Node right;
-    private final char operator;
+    private final String operator;
 
-    public BinaryOperatorNode(Node left, Node right, char operator) {
+    public BinaryOperatorNode(Node left, Node right, String operator) {
         this.left = left;
         this.right = right;
         this.operator = operator;
@@ -19,10 +19,10 @@ public class BinaryOperatorNode implements Node {
         int r = right.evaluate(variables);
 
         return switch (operator) {
-            case '+' -> l + r;
-            case '-' -> l - r;
-            case '*' -> l * r;
-            case '/' -> {
+            case "+" -> l + r;
+            case "-" -> l - r;
+            case "*" -> l * r;
+            case "/" -> {
                 if (r == 0) throw new ArithmeticException("Error: divide by 0");
                 yield l / r;
             }

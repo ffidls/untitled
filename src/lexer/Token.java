@@ -19,8 +19,6 @@ public class Token {
         this.value = value;
     }
 
-    public Type get_type() {return type;}
-
     @Override
     public String toString() {
         return String.format("Token[%s, '%s']", type, value);
