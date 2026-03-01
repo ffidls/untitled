@@ -1,11 +1,14 @@
 package parser;
 
+import exceptions.InvalidSyntaxException;
 import lexer.Token;
 import tree.BinaryOperatorNode;
 import tree.IntegerNode;
 import tree.Node;
 import tree.VariableNode;
 import java.util.List;
+
+
 
 public class Parser {
     public List<Token> expressionTokens;
@@ -18,11 +21,13 @@ public class Parser {
         this.rightIndex = expressionTokens.size();
     }
 
-    public Node parse() {
+
+    public Node parse() throws InvalidSyntaxException {
         return parseExpression(0, expressionTokens.size() - 1);
     }
 
-    private Node parseExpression(int leftIndex, int rightIndex){
+
+    private Node parseExpression(int leftIndex, int rightIndex) throws InvalidSyntaxException {
         int operationIndex = -1;
         String operation = "";
         int depth = 0;
@@ -49,7 +54,8 @@ public class Parser {
                 operation);
     }
 
-    private Node parseTerm(int leftIndex, int rightIndex){
+
+    private Node parseTerm(int leftIndex, int rightIndex) throws InvalidSyntaxException {
         int operationIndex = -1;
         String operation = "";
         int depth = 0;
@@ -76,7 +82,12 @@ public class Parser {
                 operation);
     }
 
-    private Node parseFactor(int leftIndex, int rightIndex){
+
+    private Node parseFactor(int leftIndex, int rightIndex) throws InvalidSyntaxException {
+        if (leftIndex > rightIndex) {
+            throw new InvalidSyntaxException("Unexpected empty factor");
+        }
+
         Token firstToken = expressionTokens.get(leftIndex);
 
         if (firstToken.type.equals(Token.Type.LPAREN)) {
@@ -88,10 +99,14 @@ public class Parser {
             if (value.type.equals(Token.Type.VARIABLE)) {
                 return new VariableNode(value.value);
             } else {
-                return new IntegerNode(Integer.parseInt(value.value));
+                try {
+                    return new IntegerNode(Integer.parseInt(value.value));
+                } catch (NumberFormatException e) {
+                    throw new InvalidSyntaxException("Invalid number format: " + value.value);
+                }
             }
         }
 
-        throw new RuntimeException("Unexpected parsing state at index: " + leftIndex);
+        throw new InvalidSyntaxException("Unexpected parsing state at index: " + leftIndex);
     }
 }

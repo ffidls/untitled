@@ -2,39 +2,35 @@ import lexer.Lexer;
 import lexer.Token;
 import parser.Parser;
 import tree.Node;
+import exceptions.*;
 
 import java.util.*;
 
+
+
 public class Main {
     private static Node root = null;
-    private static Map<String, Integer> variables = new HashMap<>();
-    private static final Random random = new Random();
-
+    private static final Map<String, Integer> variables = new HashMap<>();
+    private static final Random random = new Random(42);
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
         System.out.println("Enter expression (example: (12 + x) * 23 + y):");
-        String expression = scanner.nextLine().trim();
 
-        try {
-            Lexer lexer = new Lexer(expression);
-            List<Token> tokens = lexer.tokenize();
-            Parser parser = new Parser(tokens);
-            root = parser.parse();
-
-            for (Token t : tokens) {
-                if (t.type == Token.Type.VARIABLE && !variables.containsKey(t.value)) {
-                    variables.put(t.value, random.nextInt(65536));
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("ERROR: " + e.getMessage());
-            return;
+        String expression = "";
+        while (expression.isEmpty()) {
+            System.out.print("> ");
+            expression = scanner.nextLine().trim();
         }
 
-        System.out.println("\nRandom init + first calculation:");
-        printCurrentState();
+        try {
+            initExpression(expression);
+            System.out.println("\nRandom init + first calculation:");
+            printCurrentState();
+        } catch (MathAppException e) {
+            System.out.println("INITIALIZATION ERROR: " + e.getMessage());
+        }
 
         System.out.println("\nCommands:");
         System.out.println("  print          - print AST");
@@ -42,6 +38,7 @@ public class Main {
         System.out.println("  vars           - show variables");
         System.out.println("  x = 20         - set variable value");
         System.out.println("  exit           - quit");
+
 
         while (true) {
             System.out.print("\n> ");
@@ -53,65 +50,80 @@ public class Main {
 
             if (line.isEmpty()) continue;
 
-            if (line.equalsIgnoreCase("print")) {
-                System.out.println("Abstract Syntax Tree:");
-                root.print("");
-                continue;
+            try {
+                processCommand(line);
+            } catch (InvalidSyntaxException e) {
+                System.out.println("SYNTAX ERROR: " + e.getMessage());
+            } catch (EvaluationException e) {
+                System.out.println("CALCULATION ERROR: " + e.getMessage());
+            } catch (MathAppException e) {
+                System.out.println("ERROR: " + e.getMessage());
+            } catch (Exception e) {
+                System.out.println("UNEXPECTED ERROR: " + e.getMessage());
             }
-
-            if (line.equalsIgnoreCase("calc")) {
-                printCurrentState();
-                continue;
-            }
-
-            if (line.equalsIgnoreCase("vars")) {
-                System.out.println("Current variables: " + variables);
-                continue;
-            }
-
-            if (line.contains("=")) {
-                handleAssignment(line);
-                continue;
-            }
-
-            System.out.println("ERROR: unknown command");
         }
     }
 
-    private static void handleAssignment(String line) {
-        String[] parts = line.split("=");
-        if (parts.length != 2) {
-            System.out.println("ERROR: use format: x = 20");
-            return;
+    private static void processCommand(String line) throws MathAppException {
+        if (line.equalsIgnoreCase("print")) {
+            if (root == null) throw new EvaluationException("No tree built. Enter a valid expression.");
+            System.out.println("Abstract Syntax Tree:");
+            root.print("");
         }
+        else if (line.equalsIgnoreCase("calc")) {
+            printCurrentState();
+        }
+        else if (line.equalsIgnoreCase("vars")) {
+            System.out.println("Current variables: " + variables);
+        }
+        else if (line.contains("=")) {
+            handleAssignment(line);
+        }
+        else {
+            initExpression(line);
+            printCurrentState();
+        }
+    }
+
+    private static void initExpression(String expression) throws InvalidSyntaxException {
+        Lexer lexer = new Lexer(expression);
+        List<Token> tokens = lexer.tokenize();
+        Parser parser = new Parser(tokens);
+
+        root = parser.parse();
+
+        for (Token t : tokens) {
+            if (t.type == Token.Type.VARIABLE && !variables.containsKey(t.value)) {
+                variables.put(t.value, random.nextInt(65536));
+            }
+        }
+    }
+
+    private static void handleAssignment(String line) throws EvaluationException {
+        String[] parts = line.split("=");
+        if (parts.length != 2) throw new EvaluationException("Invalid format. Use: x = 20");
 
         String name = parts[0].trim();
         String valueStr = parts[1].trim();
 
         if (!name.matches("[A-Za-z][A-Za-z0-9]*")) {
-            System.out.println("ERROR: invalid variable name");
-            return;
+            throw new EvaluationException("Invalid variable name: " + name);
         }
 
         try {
             int value = Integer.parseInt(valueStr);
-            if (value < -32768 || value > 65535) {
-                System.out.println("WARNING: value exceeds 16-bit range");
-            }
             variables.put(name, value);
             System.out.println(name + " = " + value);
         } catch (NumberFormatException e) {
-            System.out.println("ERROR: invalid integer value");
+            throw new EvaluationException("Invalid integer value: " + valueStr);
         }
     }
 
-    private static void printCurrentState() {
-        try {
-            System.out.println("Variables: " + variables);
-            int result = root.evaluate(variables);
-            System.out.println("Result: " + result);
-        } catch (Exception e) {
-            System.out.println("ERROR during calculation: " + e.getMessage());
-        }
+    private static void printCurrentState() throws EvaluationException {
+        if (root == null) throw new EvaluationException("No expression loaded.");
+
+        System.out.println("Variables: " + variables);
+        int result = root.evaluate(variables);
+        System.out.println("Result: " + result);
     }
 }

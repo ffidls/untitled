@@ -1,5 +1,6 @@
 package lexer;
 
+import exceptions.InvalidSyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,10 +13,14 @@ public class Lexer {
         this.input = input;
     }
 
-    public List<Token> tokenize() {
+    public List<Token> tokenize() throws InvalidSyntaxException {
         List<Token> tokens = new ArrayList<>();
         Token.GroupsType lastGroup = null;
         Token.Type lastType = null;
+
+        if (input.trim().isEmpty()) {
+            throw new InvalidSyntaxException("Error: expression is empty.");
+        }
 
         while (pos < input.length()) {
             char c = input.charAt(pos);
@@ -31,13 +36,10 @@ public class Lexer {
             if (Character.isDigit(c)) {
                 newToken = readNumber();
                 currentGroup = Token.GroupsType.NUMBER;
-            }
-            else if (Character.isLetter(c)) {
+            } else if (Character.isLetter(c)) {
                 newToken = readVariable();
                 currentGroup = Token.GroupsType.VARIABLE;
-            }
-
-            else {
+            } else {
                 switch (c) {
                     case '+': newToken = new Token(Token.Type.PLUS, "+"); currentGroup = Token.GroupsType.SIGN; break;
                     case '-': newToken = new Token(Token.Type.MINUS, "-"); currentGroup = Token.GroupsType.SIGN; break;
@@ -46,7 +48,7 @@ public class Lexer {
                     case '(': newToken = new Token(Token.Type.LPAREN, "("); currentGroup = Token.GroupsType.PAREN; break;
                     case ')': newToken = new Token(Token.Type.RPAREN, ")"); currentGroup = Token.GroupsType.PAREN; break;
                     default:
-                        throw new RuntimeException("Unexpected symbol: " + c);
+                        throw new InvalidSyntaxException("Unexpected symbol: " + c);
                 }
                 pos++;
             }
@@ -60,64 +62,75 @@ public class Lexer {
         }
 
         if (lastGroup == Token.GroupsType.SIGN) {
-            throw new IllegalArgumentException("Error: expression cannot end with an operator");
+            throw new InvalidSyntaxException("Error: expression cannot end with an operator");
         }
         if (parenthesisBalance != 0) {
-            throw new IllegalArgumentException("Error: unbalanced parentheses! (Count: " + parenthesisBalance + ")");
+            throw new InvalidSyntaxException("Error: unbalanced parentheses! (Remaining: " + parenthesisBalance + ")");
         }
 
         return tokens;
     }
 
-    private void updateBalance(Token.Type type) {
+    private void updateBalance(Token.Type type) throws InvalidSyntaxException {
         if (type == Token.Type.LPAREN) parenthesisBalance++;
         if (type == Token.Type.RPAREN) {
             parenthesisBalance--;
             if (parenthesisBalance < 0) {
-                throw new IllegalArgumentException("Error: closing parenthesis without opening one");
+                throw new InvalidSyntaxException("Error: closing parenthesis without opening one");
             }
         }
     }
 
     private void checkSyntax(Token.GroupsType lastGroup, Token.Type lastType,
-                             Token.GroupsType currentGroup, Token currentToken, boolean isFirst) {
+                             Token.GroupsType currentGroup, Token currentToken, boolean isFirst) throws InvalidSyntaxException {
 
         if (isFirst && currentGroup == Token.GroupsType.SIGN && currentToken.type != Token.Type.MINUS) {
-            throw new IllegalArgumentException("Error: expression cannot start with " + currentToken.value);
+            throw new InvalidSyntaxException("Error: expression cannot start with " + currentToken.value);
         }
 
         if (lastGroup != null) {
             if (lastGroup == Token.GroupsType.SIGN && currentGroup == Token.GroupsType.SIGN) {
-                throw new IllegalArgumentException("Error: double operators near " + currentToken.value);
+                throw new InvalidSyntaxException("Error: double operators near " + currentToken.value);
             }
 
             boolean isLastOperand = (lastGroup == Token.GroupsType.NUMBER || lastGroup == Token.GroupsType.VARIABLE);
             boolean isCurrentOperand = (currentGroup == Token.GroupsType.NUMBER || currentGroup == Token.GroupsType.VARIABLE);
             if (isLastOperand && isCurrentOperand) {
-                throw new IllegalArgumentException("Error: missing operator between operands");
+                throw new InvalidSyntaxException("Error: missing operator between operands at " + currentToken.value);
             }
 
             if (lastType == Token.Type.LPAREN && currentToken.type == Token.Type.RPAREN) {
-                throw new IllegalArgumentException("Error: empty parentheses ()");
+                throw new InvalidSyntaxException("Error: empty parentheses ()");
             }
 
             if (lastType == Token.Type.LPAREN && currentGroup == Token.GroupsType.SIGN && currentToken.type != Token.Type.MINUS) {
-                throw new IllegalArgumentException("Error: unexpected operator after '(': " + currentToken.value);
+                throw new InvalidSyntaxException("Error: unexpected operator after '(': " + currentToken.value);
             }
 
             if (lastGroup == Token.GroupsType.SIGN && currentToken.type == Token.Type.RPAREN) {
-                throw new IllegalArgumentException("Error: operator before ')': " + currentToken.value);
+                throw new InvalidSyntaxException("Error: operator before ')': " + currentToken.value);
             }
         }
     }
 
-    private Token readNumber() {
+    private Token readNumber() throws InvalidSyntaxException {
         StringBuilder sb = new StringBuilder();
         while (pos < input.length() && Character.isDigit(input.charAt(pos))) {
             sb.append(input.charAt(pos));
             pos++;
         }
-        return new Token(Token.Type.NUMBER, sb.toString());
+        String val = sb.toString();
+
+        try {
+            long num = Long.parseLong(val);
+            if (num > 65535) {
+                throw new InvalidSyntaxException("Error: Number " + val + " exceeds 16-bit limit (65535)");
+            }
+        } catch (NumberFormatException e) {
+            throw new InvalidSyntaxException("Error: Invalid number format: " + val);
+        }
+
+        return new Token(Token.Type.NUMBER, val);
     }
 
     private Token readVariable() {
